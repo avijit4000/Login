@@ -38,25 +38,19 @@ project/
 
 ## ⚙️ Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/Manav1918/flask-forgot-password.git
-   cd flask-forgot-password
-   ```
-
-2. **Create and activate a virtual environment**
+ **Create and activate a virtual environment**
    ```bash
    python -m venv venv
    venv\Scripts\activate   # On Windows
    source venv/bin/activate  # On macOS/Linux
    ```
 
-3. **Install dependencies**
+ **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure email settings**  
+**Configure email settings**  
    In `mailSetup()` method in app.py, set your email data:
    ```python
    MAIL_SERVER = 'smtp.yourprovider.com'
@@ -69,7 +63,7 @@ project/
 
 ---
 
-## ▶️ Running the App
+▶️ Running the App
 
 ```bash
 python app.py
@@ -100,22 +94,3 @@ Then open your browser at: [http://localhost:5000](http://localhost:5000)
 - SQLite (or any database)
 - HTML/CSS
 
----
-
-## 📹 Tutorial
-
-This app is explained step-by-step in the video tutorial:  
-👉 [Watch on YouTube](https://youtu.be/1oqeDQ6O0e4](https://youtu.be/1oqeDQ6O0e4))
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License.
-
----
-
-## 🙏 Acknowledgements
-
-Thanks for watching and supporting the channel.  
-Made with ❤️ by [CID An Education Hub].

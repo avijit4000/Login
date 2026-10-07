@@ -1,11 +1,10 @@
 import os
+import sqlite3
 
-import psycopg
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer
-from psycopg.rows import dict_row
 from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
@@ -43,13 +42,23 @@ mail = mailSetup()
 
 # ✅ Database Connection
 def get_db_connection():
-    return psycopg.connect(
-        host=os.getenv('PGHOST', 'localhost'),
-        port=int(os.getenv('PGPORT', '5432')),
-        dbname=os.getenv('PGDATABASE', 'test1'),
-        user=os.getenv('PGUSER', 'postgres'),
-        password=os.getenv('PGPASSWORD', 'postgres'),
+    database_path = os.getenv('SQLITE_DB_PATH', 'app.db')
+    connection = sqlite3.connect(database_path)
+    connection.row_factory = sqlite3.Row
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS usertable (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            phone TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            joindate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
     )
+    connection.commit()
+    return connection
 
 
 @app.route('/')
@@ -69,10 +78,10 @@ def login():
         try:
             #------ database connection and query
             conn = get_db_connection()
-            cursor = conn.cursor(row_factory=dict_row)
+            cursor = conn.cursor()
 
             # Fetch user details from database
-            cursor.execute("SELECT * FROM usertable WHERE email = %s", (email,))
+            cursor.execute("SELECT * FROM usertable WHERE email = ?", (email,))
             userdata = cursor.fetchone()
             #print("Row fetched from DB: ", userdata) #console check
             conn.close()
@@ -124,10 +133,10 @@ def register():
         try:
             #------ database connection and query
             conn = get_db_connection()
-            cursor = conn.cursor(row_factory=dict_row)
+            cursor = conn.cursor()
 
             # Check if user already exists with email or phone
-            cursor.execute("SELECT * FROM usertable WHERE email = %s OR phone = %s", (email, phone))
+            cursor.execute("SELECT * FROM usertable WHERE email = ? OR phone = ?", (email, phone))
             userdata = cursor.fetchone()
             if userdata:
                 conn.close()
@@ -136,7 +145,7 @@ def register():
 
             # Insert user details to database
             cursor.execute(
-                "INSERT INTO usertable (username, email, phone, password) VALUES (%s, %s, %s, %s)",
+                "INSERT INTO usertable (username, email, phone, password) VALUES (?, ?, ?, ?)",
                 (username, email, phone, hashed_password),
             )
             conn.commit()
@@ -162,8 +171,8 @@ def forgot_password():
 
     # Check if email exists in the database
     conn = get_db_connection()
-    cursor = conn.cursor(row_factory=dict_row)
-    cursor.execute("SELECT * FROM usertable WHERE email = %s", (email,))
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM usertable WHERE email = ?", (email,))
     userdata = cursor.fetchone()
     conn.close()
 
@@ -209,7 +218,7 @@ def reset_password(token):
         # Update password in the database
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("UPDATE usertable SET password = %s WHERE email = %s", (hashed_password, email))
+        cursor.execute("UPDATE usertable SET password = ? WHERE email = ?", (hashed_password, email))
         conn.commit()
         conn.close()
 
@@ -238,8 +247,8 @@ def change_password():
         email = session['email']
         print("Email= ",email, "Current Password= ",current_password, "New Password= ",new_password) #console check ✅
         conn = get_db_connection()
-        cursor = conn.cursor(row_factory=dict_row)
-        cursor.execute("SELECT * FROM usertable WHERE email = %s", (email,))
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM usertable WHERE email = ?", (email,))
         userdata = cursor.fetchone()
         #Check if user exists and password is correct
         if not userdata or not check_password_hash(userdata['password'], current_password):
@@ -248,7 +257,7 @@ def change_password():
             return redirect(url_for('change_password'))
         #Update password in the database
         hashed_password = generate_password_hash(new_password)
-        cursor.execute("UPDATE usertable SET password = %s WHERE email = %s", (hashed_password, email))
+        cursor.execute("UPDATE usertable SET password = ? WHERE email = ?", (hashed_password, email))
         conn.commit()
         conn.close()
 
