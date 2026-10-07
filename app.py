@@ -161,13 +161,15 @@ def register():
     return redirect(url_for('login'))  # Redirect to login page if method is GET
 
 # ✅ Forgot Password Route
-@app.route('/forgot-password', methods=['POST'])
+@app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
-    email = request.form.get('email')  # Get email from the form input
-    print("Email fetched: ",email) #console check ✅
+    if request.method == 'GET':
+        return render_template('forgot_password.html')
+
+    email = request.form.get('email', '').strip().lower()
     if not email:
         flash('Please enter your email address first.', 'error')
-        return redirect(url_for('login'))
+        return redirect(url_for('forgot_password'))
 
     # Check if email exists in the database
     conn = get_db_connection()
@@ -181,13 +183,19 @@ def forgot_password():
         return redirect(url_for('login'))
 
     try:
-        # Generate Reset Token
+        # Generate reset token and send it only to a registered user.
         token = generate_reset_token(email)
         reset_link = url_for('reset_password', token=token, _external=True)
 
-        # Send Email
-        msg = Message('Password Reset Request', sender='noreply@wakenbake.com', recipients=[email])
-        msg.body = f'Click the link to reset your password: {reset_link}'
+        msg = Message(
+            'Password Reset Request',
+            sender=os.getenv('GMAIL_USERNAME'),
+            recipients=[email],
+        )
+        msg.body = (
+            'You requested a password reset for your account. '
+            f'Use this secure link within one hour: {reset_link}'
+        )
         mail.send(msg)
 
         flash('Password reset link has been sent to your email!', 'success')
@@ -195,7 +203,7 @@ def forgot_password():
         print(e)
         flash('An error occurred while sending email. Please try again.', 'error')
 
-    return redirect(url_for('login'))  # Redirect to login page after sending email
+    return redirect(url_for('forgot_password'))
 
 # ✅ Reset Password Route
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
